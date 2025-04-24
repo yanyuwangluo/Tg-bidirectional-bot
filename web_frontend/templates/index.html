@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Telegram双向消息转发系统</title>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .login-form { max-width: 400px; margin: 100px auto; padding: 20px; border: 1px solid #ccc; border-radius: 5px; }
+        .message-list { list-style: none; padding: 0; }
+        .message-item { padding: 10px; border-bottom: 1px solid #eee; }
+        .message-time { color: #666; font-size: 0.8em; }
+        .error { color: red; }
+        .success { color: green; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div id="login-section">
+        <h2>系统验证</h2>
+        <div id="error-message" class="error hidden"></div>
+        <input type="password" id="api-key" placeholder="请输入访问密钥">
+        <button onclick="authenticate()">验证</button>
+    </div>
+
+    <div id="messages-section" class="hidden">
+        <h2>最新消息</h2>
+        <ul id="message-list" class="message-list"></ul>
+        <button onclick="refreshMessages()">刷新</button>
+    </div>
+
+    <script>
+        let isAuthenticated = false;
+
+        async function authenticate() {
+            const apiKey = document.getElementById('api-key').value;
+            const response = await fetch('/api/messages', {
+                headers: {
+                    'Authorization': 'Basic ' + btoa(apiKey)
+                }
+            });
+
+            if (response.ok) {
+                isAuthenticated = true;
+                document.getElementById('login-section').classList.add('hidden');
+                document.getElementById('messages-section').classList.remove('hidden');
+                refreshMessages();
+            } else {
+                showError('密钥错误，请重试');
+            }
+        }
+
+        async function refreshMessages() {
+            const response = await fetch('/api/messages');
+            const messages = await response.json();
+            
+            const list = document.getElementById('message-list');
+            list.innerHTML = '';
+            
+            messages.forEach(msg => {
+                const li = document.createElement('li');
+                li.className = 'message-item';
+                li.innerHTML = `
+                    <div>${msg.user}</div>
+                    <div class="message-time">${new Date(msg.time).toLocaleString()}</div>
+                    <div>${msg.content}</div>
+                    ${msg.type ? `<div>[${msg.type}]</div>` : ''}
+                `;
+                list.prepend(li);
+            });
+        }
+
+        function showError(msg) {
+            const errorEl = document.getElementById('error-message');
+            errorEl.textContent = msg;
+            errorEl.classList.remove('hidden');
+            setTimeout(() => errorEl.classList.add('hidden'), 3000);
+        }
+    </script>
+</body>
+</html>

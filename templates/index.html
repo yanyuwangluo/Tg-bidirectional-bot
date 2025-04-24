@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram消息转发系统</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --tg-color: #0088cc;
+            --tg-light: #e7f5fb;
+            --text-color: #333;
+            --time-color: #888;
+            --border-radius: 12px;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: var(--text-color);
+            padding-bottom: 2rem;
+        }
+        .header {
+            background-color: var(--tg-color);
+            color: white;
+            padding: 1.5rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .message-card {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            margin-bottom: 1.2rem;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .message-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .message-header {
+            background-color: var(--tg-light);
+            padding: 0.8rem 1.2rem;
+            font-weight: 500;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .message-body {
+            padding: 1.2rem;
+        }
+        .message-footer {
+            padding: 0.8rem 1.2rem;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--time-color);
+        }
+        .user-name {
+            color: var(--tg-color);
+            font-weight: 600;
+        }
+        .message-id {
+            font-size: 0.75rem;
+            color: var(--time-color);
+        }
+        .message-content {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .media-preview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
+            margin-top: 0.5rem;
+        }
+        .badge-text { background-color: #6c757d; }
+        .badge-photo { background-color: #28a745; }
+        .badge-document { background-color: #007bff; }
+        .badge-audio { background-color: #fd7e14; }
+        .badge-video { background-color: #dc3545; }
+        
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #6c757d;
+        }
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        .error-state {
+            background-color: #f8d7da;
+            color: #842029;
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            text-align: center;
+        }
+        .refresh-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--tg-color);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .refresh-btn:hover {
+            transform: rotate(45deg);
+        }
+        .refresh-btn i {
+            font-size: 1.5rem;
+        }
+        /* 密钥验证界面样式 */
+        .auth-container {
+            max-width: 400px;
+            margin: 100px auto;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            text-align: center;
+        }
+        .auth-logo {
+            font-size: 3rem;
+            color: var(--tg-color);
+            margin-bottom: 1rem;
+        }
+        .logout-btn {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+        }
+        .logout-btn i {
+            font-size: 1.5rem;
+        }
+        .main-content {
+            display: none; /* 默认隐藏内容 */
+        }
+    </style>
+</head>
+<body>
+    <!-- 密钥验证界面 -->
+    <div id="auth-screen" class="auth-container">
+        <div class="auth-logo">
+            <i class="bi bi-telegram"></i>
+        </div>
+        <h2 class="mb-4">Telegram消息转发系统</h2>
+        <div class="mb-3">
+            <input type="password" id="access-key" class="form-control mb-3" placeholder="请输入访问密钥">
+            <div id="auth-error" class="text-danger mb-3" style="display: none;">
+                密钥错误，请重试
+            </div>
+            <button id="login-btn" class="btn btn-primary w-100">
+                <i class="bi bi-unlock"></i> 访问系统
+            </button>
+        </div>
+    </div>
+
+    <!-- 主内容区域 -->
+    <div id="main-content" class="main-content">
+        <div class="header">
+            <div class="container">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h1><i class="bi bi-telegram"></i> Telegram消息转发系统</h1>
+                    <span id="last-updated" class="text-light"></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="container">
+            <div id="messages-container">
+                <div class="loading-spinner">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="refresh-btn" id="refresh-btn" title="刷新消息">
+            <i class="bi bi-arrow-clockwise"></i>
+        </div>
+        
+        <button class="logout-btn" id="logout-btn" title="退出登录">
+            <i class="bi bi-box-arrow-right"></i>
+        </button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 常量定义
+            const API_KEY = 'yanyuge'; // 密钥常量
+            const AUTH_KEY = 'tg_auth_token';
+            const AUTH_EXPIRY = 'tg_auth_expiry';
+            
+            // 获取DOM元素
+            const authScreen = document.getElementById('auth-screen');
+            const mainContent = document.getElementById('main-content');
+            const accessKeyInput = document.getElementById('access-key');
+            const loginBtn = document.getElementById('login-btn');
+            const authError = document.getElementById('auth-error');
+            const logoutBtn = document.getElementById('logout-btn');
+            const messagesContainer = document.getElementById('messages-container');
+            const lastUpdatedElem = document.getElementById('last-updated');
+            const refreshBtn = document.getElementById('refresh-btn');
+            
+            // 检查是否已验证
+            function checkAuth() {
+                const authToken = localStorage.getItem(AUTH_KEY);
+                const expiry = localStorage.getItem(AUTH_EXPIRY);
+                
+                if (authToken && expiry && parseInt(expiry) > Date.now()) {
+                    // 验证成功且未过期
+                    showMainContent();
+                    fetchMessages();
+                } else {
+                    // 未验证或已过期
+                    localStorage.removeItem(AUTH_KEY);
+                    localStorage.removeItem(AUTH_EXPIRY);
+                    showAuthScreen();
+                }
+            }
+            
+            // 显示验证界面
+            function showAuthScreen() {
+                authScreen.style.display = 'block';
+                mainContent.style.display = 'none';
+            }
+            
+            // 显示主内容
+            function showMainContent() {
+                authScreen.style.display = 'none';
+                mainContent.style.display = 'block';
+            }
+            
+            // 验证密钥
+            function authenticateUser() {
+                const enteredKey = accessKeyInput.value.trim();
+                
+                if (enteredKey === API_KEY) {
+                    // 验证成功，保存验证状态并设置24小时过期
+                    const expiryTime = Date.now() + (24 * 60 * 60 * 1000);
+                    localStorage.setItem(AUTH_KEY, 'authenticated');
+                    localStorage.setItem(AUTH_EXPIRY, expiryTime.toString());
+                    
+                    // 显示主内容
+                    showMainContent();
+                    fetchMessages();
+                } else {
+                    // 验证失败
+                    authError.style.display = 'block';
+                    setTimeout(() => {
+                        authError.style.display = 'none';
+                    }, 3000);
+                }
+            }
+            
+            // 退出登录
+            function logout() {
+                localStorage.removeItem(AUTH_KEY);
+                localStorage.removeItem(AUTH_EXPIRY);
+                showAuthScreen();
+            }
+            
+            // 格式化日期时间
+            function formatDateTime(dateStr) {
+                const date = new Date(dateStr);
+                return date.toLocaleString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+            }
+            
+            // 获取消息类型的徽章
+            function getTypeBadge(type) {
+                const types = {
+                    'text': '<span class="badge bg-secondary">文本</span>',
+                    'photo': '<span class="badge badge-photo">图片</span>',
+                    'document': '<span class="badge badge-document">文档</span>',
+                    'audio': '<span class="badge badge-audio">音频</span>',
+                    'video': '<span class="badge badge-video">视频</span>'
+                };
+                return types[type] || '<span class="badge bg-secondary">未知</span>';
+            }
+            
+            // 获取消息内容的显示
+            function getContentDisplay(message) {
+                let content = `<div class="message-content">${message.content}</div>`;
+                
+                if (message.type === 'photo') {
+                    content += `<div class="mt-2">
+                        <img src="/files/${message.content.replace('[', '').replace(']', '')}" 
+                            class="media-preview" alt="图片">
+                    </div>`;
+                } else if (message.type === 'video') {
+                    content += `<div class="mt-2">
+                        <video src="/files/${message.content.replace('[', '').replace(']', '')}" 
+                            class="media-preview" controls>您的浏览器不支持视频播放</video>
+                    </div>`;
+                } else if (message.type === 'audio') {
+                    content += `<div class="mt-2">
+                        <audio src="/files/${message.content.replace('[', '').replace(']', '')}" 
+                            class="w-100" controls>您的浏览器不支持音频播放</audio>
+                    </div>`;
+                } else if (message.type === 'document') {
+                    const fileName = message.content.match(/\[(.*?)\]/)?.[1] || message.content;
+                    content += `<div class="mt-2">
+                        <a href="/files/${message.content.replace('[', '').replace(']', '')}" 
+                            class="btn btn-sm btn-outline-primary" download>
+                            <i class="bi bi-file-earmark-arrow-down"></i> 下载文档
+                        </a>
+                    </div>`;
+                }
+                
+                return content;
+            }
+            
+            // 刷新消息列表
+            function fetchMessages() {
+                messagesContainer.innerHTML = `
+                    <div class="loading-spinner">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">加载中...</span>
+                        </div>
+                    </div>
+                `;
+                
+                fetch('/api/messages', {
+                    headers: {
+                        'Authorization': 'Basic ' + API_KEY
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('认证失败');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    lastUpdatedElem.textContent = `最后更新: ${new Date().toLocaleTimeString()}`;
+                    
+                    if (data.length === 0) {
+                        messagesContainer.innerHTML = `
+                            <div class="empty-state">
+                                <i class="bi bi-chat-square-text"></i>
+                                <h4>暂无消息</h4>
+                                <p>当用户向您的Telegram机器人发送消息后，消息将显示在这里</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    // 更新消息列表
+                    messagesContainer.innerHTML = '';
+                    data.forEach(msg => {
+                        const messageCard = document.createElement('div');
+                        messageCard.className = 'message-card';
+                        
+                        const formattedTime = formatDateTime(msg.time);
+                        const typeBadge = getTypeBadge(msg.type);
+                        const contentDisplay = getContentDisplay(msg);
+                        
+                        messageCard.innerHTML = `
+                            <div class="message-header">
+                                <div>
+                                    <span class="user-name">${msg.user}</span>
+                                    ${typeBadge}
+                                </div>
+                                <span class="message-id">#${msg.id}</span>
+                            </div>
+                            <div class="message-body">
+                                ${contentDisplay}
+                            </div>
+                            <div class="message-footer">
+                                <span><i class="bi bi-clock"></i> ${formattedTime}</span>
+                                <span><i class="bi bi-hash"></i> ${msg.id}</span>
+                            </div>
+                        `;
+                        
+                        messagesContainer.appendChild(messageCard);
+                    });
+                })
+                .catch(error => {
+                    messagesContainer.innerHTML = `
+                        <div class="error-state">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <h4>出错了</h4>
+                            <p>${error.message}</p>
+                        </div>
+                    `;
+                });
+            }
+            
+            // 绑定事件
+            loginBtn.addEventListener('click', authenticateUser);
+            accessKeyInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    authenticateUser();
+                }
+            });
+            refreshBtn.addEventListener('click', fetchMessages);
+            logoutBtn.addEventListener('click', logout);
+            
+            // 自动刷新
+            let autoRefreshInterval;
+            function startAutoRefresh() {
+                autoRefreshInterval = setInterval(fetchMessages, 60000);
+            }
+            function stopAutoRefresh() {
+                clearInterval(autoRefreshInterval);
+            }
+            
+            // 初始检查验证状态
+            checkAuth();
+            
+            // 页面可见性变化时管理自动刷新
+            document.addEventListener('visibilitychange', function() {
+                if (document.visibilityState === 'visible') {
+                    if (localStorage.getItem(AUTH_KEY)) {
+                        fetchMessages();
+                        startAutoRefresh();
+                    }
+                } else {
+                    stopAutoRefresh();
+                }
+            });
+            
+            // 启动自动刷新
+            if (localStorage.getItem(AUTH_KEY)) {
+                startAutoRefresh();
+            }
+        });
+    </script>
+</body>
+</html> 

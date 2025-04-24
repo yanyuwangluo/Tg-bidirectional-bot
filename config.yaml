@@ -1,0 +1,16 @@
+# config.yaml
+telegram:
+  bot_token: "7xxxxxxx"
+  admin_chat_id: 123456
+  bark_api_key: "xxxxxxx"
+
+web_server:
+  port: 5000
+  secret_key: "yanyuge"
+
+file_storage:
+  path: "files"
+  max_size: 10485760  # 10MB
+
+database:
+  path: "message_history.db"

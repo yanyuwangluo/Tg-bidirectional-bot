@@ -16,8 +16,8 @@
 ### 1. 克隆仓库
 
 ```bash
-git clone [仓库地址]
-cd telegram-message-forwarder
+git clone https://github.com/yanyuwangluo/Tg-bidirectional-bot.git
+cd Tg-bidirectional-bot
 ```
 
 ### 2. 安装依赖

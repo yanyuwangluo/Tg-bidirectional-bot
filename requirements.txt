@@ -1,7 +1,7 @@
 Flask==2.3.3
 Werkzeug==2.3.7
 python-telegram-bot==20.6
-requests==2.31.0
+requests==2.32.2
 PyYAML==6.0.1
 sqlite3==3.41.2
 python-dotenv==1.0.0 
